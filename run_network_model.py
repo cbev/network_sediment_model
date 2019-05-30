@@ -181,8 +181,8 @@ c5_ss=0.1315
 c6_ss=-0.0091
 A_ss=1.3*10**-7
 
-# for bedload sand equations
-pcnt_sb_er=0.08  # percent of sand on the bed surface that can be eroded into suspended sediment
+# for sand equations
+pcnt_sb_er=0.025  # percent of sand on the bed surface that can be eroded into suspended sediment
 d_sand_sb=0.00025  #dsandch_LM
 d_star_sb=(((sg-1)*g*d_sand_sb**3)/(v**2))**(1/3) # unitless grain size 
 v_sb=(v/d_sand_sb)*(np.sqrt((1/4)*(24/1.5)**(2/1)+((4*d_star_sb**3)/(3*1.5))**(1/1))-(1/2)*(24/1.5)**(1/1))**1 # falling velocity of sand (m/s)              
@@ -196,7 +196,7 @@ else:
     alp_2=1.23
 
 # for silt equations
-pcnt_m_er=0.20   # percent of silt on the bed surface that can be eroded into suspended sediment
+pcnt_m_er=0.025   # percent of silt on the bed surface that can be eroded into suspended sediment
 tau_c_fines=0.015*(bd_fine*rho_w-rho_w)**0.73
 a_w_m=0.08
 n_w_m=1.65
@@ -326,10 +326,8 @@ def compute_channel_properties(ref_stream, a_u_ref, b_u_ref, a_d_ref, b_d_ref, a
     g=9.81
     # ref stream values for given flow
     Dref=a_d_ref*Qref**b_d_ref
-    #Uref=a_u_ref*Qref**b_u_ref
     # stream-of-interest values for given flow
     D=Dref*(total_ca**exp_d_us)/(total_ca_ref**exp_d_us)
-    #U=Uref*(total_ca**exp_u_us)/(total_ca_ref**exp_u_us)
     U=Q/(D*width)
     ng=ng_obs_bar*a_n*D**b_n
     tau=rho_w*g*((ng*U)**(3/2))*S**(1/4)
@@ -618,7 +616,6 @@ if plot_q=='yes':
     
     q_NSE, q_r2=compute_NSE_rs (mod, obs)
 
-
 # Setup network file
 if process_network=='yes':
     network=setup_network(model_input_folder)
@@ -753,15 +750,9 @@ Vm_t=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1)
 # Lake Mills gage rating curve
 LM_gage_rc=pd.DataFrame(0, index=np.arange (0,len(streamflow.index)), columns=['g','sb','ss','m'])
 
-
 # Other
 Ch_Fs=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
 Ch_Fg=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
-#C_ss=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
-#Vs_s=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
-#Vs_e=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
-#Vs_s_annual=pd.DataFrame(0, index=strm_link_vals, columns=np.unique(streamflow.index.year))
-#Vm_e_annual=pd.DataFrame(0, index=strm_link_vals, columns=np.unique(streamflow.index.year))
 
 if recycle_run=='yes':
     os.chdir(recycle_run_directory)
@@ -790,9 +781,6 @@ if recycle_run=='yes':
     
     Ch_Fs.loc[:,0]=np.load('Ch_Fs.npy')[:,-1]
     Ch_Fg.loc[:,0]=np.load('Ch_Fg.npy')[:,-1]
-#    C_ss.loc[:,0]=np.load('C_ss.npy')[:,-1]
-#    Vs_s.loc[:,0]=np.load('Vs_s.npy')[:,-1]
-#    Vs_e.loc[:,0]=np.load('Vs_e.npy')[:,-1]
 
     np.unique(streamflow.index.year)[0]
     
@@ -851,16 +839,6 @@ if recycle_run=='no':
     Ch_Fs.loc[:,0]=network['Ch_Fs_strms']
     Ch_Fg=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
     Ch_Fg.loc[:,0]=1-network['Ch_Fs_strms']
-#    C_ss=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
-#    Vs_s=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
-#    Vs_e=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,start_year_len+1))
-#    
-#    Vs_s_annual=pd.DataFrame(0, index=strm_link_vals, columns=np.unique(streamflow.index.year))
-#    Vm_e_annual=pd.DataFrame(0, index=strm_link_vals, columns=np.unique(streamflow.index.year))
-    
-#    C_ss.loc[:,0]=0
-#    Vs_s.loc[:,0]=0
-#    Vs_e.loc[:,0]=0
 
     # Annually- Preallocate sediment volume data frames representing sediment "buckets" for year
     # Volumes stored on bed [m3]
@@ -957,7 +935,7 @@ for i in range (0,len(streamflow.index)):
     
                     # Suspended Sediment- Based on Patil et al., 2012
                     SS_vol=(Vss_t.loc[j,day_of_year]+Vm_t.loc[j,day_of_year])
-                    C_ss=sg*rho_w*SS_vol/(SS_vol+Qvol)
+                    C_ss=sg*rho_w*SS_vol/Qvol
                     if Vg_b.loc[j,day_of_year]==0: # if there's no surface sediment then no transport
                         Ch_Fg_temp=0           
                     else: 
@@ -1024,8 +1002,6 @@ for i in range (0,len(streamflow.index)):
                     else: # if all good!
                         Ch_Fs.loc[j,day_of_year]=(Vs_b.loc[j,day_of_year])/(Vs_b.loc[j,day_of_year]+Vg_b.loc[j,day_of_year])
                         Ch_Fg.loc[j,day_of_year]=(Vg_b.loc[j,day_of_year])/(Vs_b.loc[j,day_of_year]+Vg_b.loc[j,day_of_year])
-#                        Ch_Fs.loc[j,day_of_year]=(Vs_b.loc[j,day_of_year])/(Vm_e+b_ss_transfer+Vs_b.loc[j,day_of_year]+Vg_b.loc[j,day_of_year])
-#                        Ch_Fg.loc[j,day_of_year]=(Vg_b.loc[j,day_of_year])/(Vm_e+b_ss_transfer+Vs_b.loc[j,day_of_year]+Vg_b.loc[j,day_of_year])
                         
                         tau_star_rsm=0.021+0.015*np.exp(-20*Ch_Fs.loc[j,day_of_year]) # dimensionless reference shear stress for mean grain size
                         tau_rsm=tau_star_rsm*(sg-1)*rho_w*g*(network.loc[j,'dmean_ch_m']) # reference shear stress for mean grain size [N/m2]
@@ -1085,11 +1061,7 @@ for i in range (0,len(streamflow.index)):
                     Vss_cap.loc[j,day_of_year]=np.nan
                     Ch_Fs.loc[j,day_of_year]=np.nan
                     Ch_Fg.loc[j,day_of_year]=np.nan
-#                    C_ss.loc[j,day_of_year]=np.nan
-#                    Vs_s.loc[j,day_of_year]=np.nan
-#                    Vs_e.loc[j,day_of_year]=np.nan
-                    
-                    
+                              
     LM_gage_rc.loc[i,'g']= Vg_t.loc[144, day_of_year]
     LM_gage_rc.loc[i,'sb']=Vsb_t.loc[144, day_of_year]
     LM_gage_rc.loc[i,'ss']=Vss_t.loc[144, day_of_year]
@@ -1124,31 +1096,6 @@ for i in range (0,len(streamflow.index)):
 
         Ch_Fs_last=Ch_Fs.loc[:, Ch_Fs.columns[-1]]
         Ch_Fg_last=Ch_Fg.loc[:, Ch_Fg.columns[-1]]
-#        C_ss_last=C_ss.loc[:, C_ss.columns[-1]]
-#        Vs_s_last=Vs_s.loc[:, Vs_s.columns[-1]]
-#        Vs_e_last=Vs_s.loc[:, Vs_e.columns[-1]]
-
-#         Monthly Loads
-#        Vg_b_monthly.loc[:, date.year]=Vg_b.resample("M", axis=0).sum()
-#        Vs_b_monthly.loc[:, date.year]=Vs_b_last
-#        Vm_b_monthly.loc[:, date.year]=Vm_b_last
-#
-#        Vg_b_ctv_monthly.loc[:, date.year]=Vg_b_ctv_last
-#        Vs_b_ctv_monthly.loc[:, date.year]=Vs_b_ctv_last
-#        Vm_b_ctv_monthly.loc[:, date.year]=Vm_b_ctv_last
-#
-#        Vg_mw_monthly.loc[:, date.year]=Vg_mw[1::].sum(axis=1)
-#        Vs_mw_monthly.loc[:, date.year]=Vs_mw[1::].sum(axis=1)
-#        Vm_mw_monthly.loc[:, date.year]=Vm_mw[1::].sum(axis=1)
-#
-#        Vg_cap_monthly.loc[:, date.year]=Vg_cap[1::].sum(axis=1)
-#        Vsb_cap_monthly.loc[:, date.year]=Vsb_cap[1::].sum(axis=1)
-#        Vss_cap_monthly.loc[:, date.year]=Vss_cap[1::].sum(axis=1)
-#
-#        Vg_t_monthly.loc[:, date.year]=Vg_t[1::].sum(axis=1)
-#        Vsb_t_monthly.loc[:, date.year]=Vsb_t[1::].sum(axis=1)
-#        Vss_t_monthly.loc[:, date.year]=Vss_t[1::].sum(axis=1)
-#        Vm_t_monthly.loc[:, date.year]=Vm_t[1::].sum(axis=1)
 
         # Annual loads
         Vg_b_annual.loc[:, date.year]=Vg_b_last
@@ -1216,9 +1163,7 @@ for i in range (0,len(streamflow.index)):
 
         np.save('Ch_Fs',  Ch_Fs)
         np.save('Ch_Fg',  Ch_Fg)
-#        np.save('C_ss',  C_ss)
-#        np.save('Vs_s',  Vs_s)
-#        np.save('Vs_e',  Vs_e)
+
         np.save('time_mw', time_mw)
         np.save('tL_mw', tL_mw)
         np.save('LM_gage_rc',LM_gage_rc)
@@ -1246,10 +1191,7 @@ for i in range (0,len(streamflow.index)):
 
         Ch_Fs=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,next_year_len+1))
         Ch_Fg=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,next_year_len+1))
-#        C_ss=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,next_year_len+1))
-#        Vs_s=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,next_year_len+1))
-#        Vs_e=pd.DataFrame(0, index=strm_link_vals, columns=np.arange(0,next_year_len+1))
-
+        
         Vg_b.loc[:, Vg_b.columns[0]]=Vg_b_last
         Vs_b.loc[:, Vs_b.columns[0]]=Vs_b_last
         Vm_b.loc[:, Vm_b.columns[0]]=Vm_b_last
@@ -1272,10 +1214,7 @@ for i in range (0,len(streamflow.index)):
         Vm_t.loc[:, Vm_t.columns[0]]=Vm_t_last
 
         Ch_Fs.loc[:, Ch_Fs.columns[0]]=Ch_Fs_last
-        Ch_Fg.loc[:, Ch_Fg.columns[0]]=Ch_Fg_last
-#        C_ss.loc[:, C_ss.columns[0]]=C_ss_last
-#        Vs_s.loc[:, Vs_s.columns[0]]=Vs_s_last
-#        Vs_e.loc[:, Vs_e.columns[0]]=Vs_e_last        
+        Ch_Fg.loc[:, Ch_Fg.columns[0]]=Ch_Fg_last     
         day_of_year=0
         
 # Save results!
@@ -1331,93 +1270,3 @@ np.save('Vg_t', Vg_t)
 np.save('Vsb_t', Vsb_t)
 np.save('Vss_t', Vss_t)
 np.save('Vm_t', Vm_t)
-
-#np.save('Vs_e', Vs_e)
-#np.save('Vs_s', Vs_s)
-
-#%%
-streams_to_plot=[103, 144, 157, 251, 304, 387, 403] # [103, 144, 251, 284, 291, 304, 309, 310, 338, 358, 370, 377, 381, 403]
-# Daily review for last year
-daily_start_date=datetime.date(1915,1,1) # for daily review- start the day before year of interest
-daily_end_date=datetime.date(1915,9,12)# for daily review
-
-for stream_index in streams_to_plot:  
-    plot_title=''
-    fig, (ax1, ax2, ax3, ax4, ax5)=plt.subplots(5,1, sharex=True, sharey=False)        
-    
-    ax1.plot(Vg_mw.columns,
-             Vg_mw.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'r-', linewidth=3, label='gravel')
-    ax1.plot(Vg_mw.columns,
-             Vs_mw.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'b-', linewidth=3, label='sand')
-    ax1.plot(Vg_mw.columns,
-             Vm_mw.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'g-', linewidth=3, label='mud')
-    ax1.set_title('Stream Number '+str(stream_index)+'\nSediment Deposited from Landslide',fontsize=10)
-    ax1.set_ylabel('Depth (m)',fontsize=8)
-    ax1.legend()
-    
-    ax2.plot(Vg_mw.columns, 
-             Vg_cap.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'r-', linewidth=3)  
-    ax2.plot(Vg_mw.columns, 
-             Vsb_cap.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'b-', linewidth=3)
-    ax2.set_title('Bedload Transport Capacity of Stream',fontsize=10)
-    ax2.set_ylabel('Depth (m)',fontsize=8)
-    #ax2.set_ylabel('Sediment\nDischarge\n(m3/s)',fontsize=12)
-    
-    ax3.plot(Vg_mw.columns,
-             Vg_t.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'r-',linewidth=3)
-    ax3.plot(Vg_mw.columns,
-             Vsb_t.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'b-',linewidth=3)
-    ax3.plot(Vg_mw.columns,
-             Vss_t.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'c-',linewidth=3)
-    ax3.plot(Vg_mw.columns,
-             Vm_t.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'g-',linewidth=3)
-    ax3.set_title('Sediment Transported Out of Channel',fontsize=10)
-    ax3.set_ylabel('Depth (m)',fontsize=8)
-    #ax3.set_ylabel('Sediment\nDischarge\n(m3/s)',fontsize=12)
-    
-    ax4.plot(Vg_mw.columns,
-             Vg_b.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'r-', linewidth=3)
-    ax4.plot(Vg_mw.columns,
-             Vs_b.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'b-', linewidth=3)
-    ax4.plot(Vg_mw.columns,
-             Vm_b.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'g-', linewidth=3)
-    ax4.set_title('Sediment Accumulated on Channel Bed',fontsize=10)
-    ax4.set_ylabel('Depth (m)',fontsize=8)
-    
-    ax5.plot(Vg_mw.columns,
-             Vg_b_ctv.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'r-', linewidth=3)
-    ax5.plot(Vg_mw.columns,
-             Vs_b_ctv.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'b-', linewidth=3)
-    ax5.plot(Vg_mw.columns,
-             Vm_b_ctv.loc[stream_index,Vg_mw.columns]/(network.loc[stream_index,'width']*network.loc[stream_index,'segment_length_m']),
-             'g-', linewidth=3)
-    ax5.set_title('Cumulative Sediment Accumulated on Channel Bed',fontsize=10)
-    ax5.set_ylabel('Depth (m)',fontsize=10)
-    ax5.set_xlabel('Year',fontsize=8)
-    
-    sum_transported_gravel=np.sum(Vg_t.loc[stream_index,Vg_mw.columns])
-    sum_transported_sandb=np.sum(Vsb_t.loc[stream_index,Vg_mw.columns])
-    sum_transported_sands=np.sum(Vss_t.loc[stream_index,Vg_mw.columns])
-    sum_transported_mud=np.sum(Vm_t.loc[stream_index,Vg_mw.columns])    
-    
-    print('Stream Number', stream_index, ', Total gravel transported (10^6 m3)=',sum_transported_gravel/10**6)
-    print('Stream Number', stream_index, ', Total bedload sand transported(10^6 m3)=',sum_transported_sandb/10**6)
-    print('Stream Number', stream_index, ', Total suspended sand transported(10^6 m3)=',sum_transported_sands/10**6)
-    print('Stream Number', stream_index, ', Total mud transported(10^6 m3)=',sum_transported_mud/10**6)
-    print('Stream Number', stream_index, ', Total sediment transported (10^6 m3)=',
-          (sum_transported_gravel+sum_transported_sandb+sum_transported_sands+sum_transported_mud)/10**6)
-    print('--------------------')
